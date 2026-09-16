@@ -1,6 +1,17 @@
-import { describe, it, expect } from 'vitest';
-import { toCatalogExport, serializeCatalogExport, type CatalogExport } from './export-catalog';
+import { describe, it, expect, afterEach } from 'vitest';
+import { mkdtempSync, readFileSync, rmSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
+import { categories, publishers, games } from './schema';
+import { createTestDatabase } from './test-helpers';
+import {
+    toCatalogExport,
+    serializeCatalogExport,
+    writeCatalogExport,
+    type CatalogExport,
+} from './export-catalog';
 import type { Game } from '../src/types/game';
+import type { Database } from '../src/lib/db';
 
 function makeGame(overrides: Partial<Game> = {}): Game {
     return {
@@ -148,5 +159,45 @@ describe('serializeCatalogExport', () => {
         expect(output.endsWith('}\n')).toBe(true);
         expect(output).toContain('\n  "gameCount": 1');
         expect(JSON.parse(output).games).toHaveLength(1);
+    });
+});
+
+describe('writeCatalogExport', () => {
+    let tempDir: string;
+
+    afterEach(() => {
+        if (tempDir) rmSync(tempDir, { recursive: true, force: true });
+    });
+
+    it('reads the database and writes the returned catalog to a nested path', async () => {
+        const db: Database = await createTestDatabase();
+        const [category] = await db
+            .insert(categories)
+            .values({ name: 'Strategy', description: 'cat' })
+            .returning({ id: categories.id });
+        const [publisher] = await db
+            .insert(publishers)
+            .values({ name: 'Rebase Games', description: 'pub' })
+            .returning({ id: publishers.id });
+
+        await db.insert(games).values({
+            title: 'Merge Conflict',
+            description: 'A co-op game about resolving conflicts.',
+            starRating: 4.5,
+            categoryId: category.id,
+            publisherId: publisher.id,
+        });
+
+        tempDir = mkdtempSync(join(tmpdir(), 'catalog-export-'));
+        const outputPath = join(tempDir, 'nested', 'catalog.json');
+
+        const returned: CatalogExport = await writeCatalogExport(db, outputPath);
+        const output = readFileSync(outputPath, 'utf-8');
+        const written = JSON.parse(output) as CatalogExport;
+
+        expect(returned.gameCount).toBe(1);
+        expect(returned.games[0].title).toBe('Merge Conflict');
+        expect(written).toEqual(returned);
+        expect(output.endsWith('}\n')).toBe(true);
     });
 });
