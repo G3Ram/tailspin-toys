@@ -49,8 +49,8 @@ export interface CatalogExport {
 
 const GROUNDING_NOTE =
     'This file is the complete Tailspin Toys catalog. It contains every game the platform lists. ' +
-'There are no funding totals, backer counts, player counts, pledge tiers, prices, or release dates in this dataset — ' +
-    'do not state any such figures.'
+    'There are no funding totals, backer counts, player counts, pledge tiers, prices, or release dates in this dataset — ' +
+    'do not state any such figures.';
 
 function mapCatalogGame(game: Game): CatalogGame {
     return {
