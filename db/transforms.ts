@@ -83,7 +83,7 @@ export function parseCsv(content: string): Record<string, string>[] {
     });
 }
 
-/** Parse the games seed CSV into typed rows. */
+/** Parse a seed CSV payload into a typed set of game rows for ingestion. */
 export function parseGamesCsv(content: string): GameCsvRow[] {
     return parseCsv(content)
         .filter((row) => (row.Title ?? '').trim().length > 0)
@@ -95,14 +95,17 @@ export function parseGamesCsv(content: string): GameCsvRow[] {
         }));
 }
 
+/** Build the default description shown for a catalog category. */
 export function categoryDescription(name: string): string {
     return `Collection of ${name} games available for crowdfunding`;
 }
 
+/** Build the default description shown for a publisher record. */
 export function publisherDescription(name: string): string {
     return `${name} is a game publisher seeking funding for exciting new titles`;
 }
 
+/** Append the standard crowdfunding CTA to a raw game description. */
 export function gameDescription(rawDescription: string): string {
     return rawDescription + CROWDFUNDING_BLURB;
 }
