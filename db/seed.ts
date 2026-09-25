@@ -15,6 +15,7 @@ import {
 } from './transforms';
 
 const here = dirname(fileURLToPath(import.meta.url));
+const UNRATED_GAME_TITLE = 'DevOps Dominion';
 
 async function upsertCategories(db: Database, names: string[]): Promise<Map<string, number>> {
     const map = new Map<string, number>();
@@ -60,12 +61,15 @@ export async function seedDatabase(db: Database, csvPath: string = join(here, 'g
     for (const row of rows) {
         const existing = await db.select().from(games).where(eq(games.title, row.title)).limit(1);
         if (existing.length > 0) {
+            if (row.title === UNRATED_GAME_TITLE && existing[0].starRating !== null) {
+                await db.update(games).set({ starRating: null }).where(eq(games.id, existing[0].id));
+            }
             continue;
         }
         await db.insert(games).values({
             title: row.title,
             description: gameDescription(row.description),
-            starRating: ratingFromTitle(row.title),
+            starRating: row.title === UNRATED_GAME_TITLE ? null : ratingFromTitle(row.title),
             categoryId: categoryIds.get(row.category)!,
             publisherId: publisherIds.get(row.publisher)!,
         });
