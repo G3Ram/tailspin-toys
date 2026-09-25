@@ -24,6 +24,33 @@ test.describe('Game Listing and Navigation', () => {
     });
   });
 
+  test('should display each game rating out of five on its card', async ({ page }) => {
+    await page.goto('/');
+
+    const gameCards = page.getByTestId('game-card');
+    await expect(gameCards.first()).toBeVisible();
+
+    for (let index = 0; index < await gameCards.count(); index += 1) {
+      const rating = gameCards.nth(index).getByTestId('game-rating');
+      await expect(rating).toBeVisible();
+      await expect(rating).toHaveText(/(?:\d+\.\d+\s*\/\s*5|No rating yet)/);
+    }
+  });
+
+  test('should show a numeric rating out of five on a rated game card', async ({ page }) => {
+    await page.goto('/');
+
+    const ratedGameCard = page.locator('[data-testid="game-card"][data-game-title="Pipeline Conquest"]');
+    await expect(ratedGameCard.getByTestId('game-rating')).toHaveText(/^\s*★.*\d+\.\d+\s*\/\s*5\s*$/);
+  });
+
+  test('should show the no-rating state on the unrated game card', async ({ page }) => {
+    await page.goto('/');
+
+    const unratedGameCard = page.locator('[data-testid="game-card"][data-game-title="DevOps Dominion"]');
+    await expect(unratedGameCard.getByTestId('game-rating')).toHaveText('No rating yet');
+  });
+
   test('should navigate to correct game details page when clicking on a game', async ({ page }) => {
     let gameId: string | null;
     let gameTitle: string | null;
