@@ -186,3 +186,9 @@ npx vitest run src/lib/games.test.ts
 4. Run E2E tests (if UI changed): `npm run test:e2e`
 5. Verify new functionality has appropriate test coverage
 6. Confirm no tests were broken, skipped, or disabled
+
+--
+
+## Results output formatting
+
+Upon completion, report each command that ran and whether it passed, failed, or was blocked. Include test counts, durations, errors, warnings, and other metrics only when the tool reports them. Identify the next action for any failure or blocker, and never describe a skipped or incomplete check as passed.
