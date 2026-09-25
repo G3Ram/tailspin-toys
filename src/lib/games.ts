@@ -2,6 +2,7 @@ import { eq, asc } from 'drizzle-orm';
 import type { Database } from './db';
 import { games, categories, publishers } from '../../db/schema';
 import type { Game } from '../types/game';
+import { filterGames, type GameFilters } from './game-filters';
 
 const gameSelection = {
     id: games.id,
@@ -50,10 +51,10 @@ function baseGamesQuery(db: Database) {
         .leftJoin(publishers, eq(games.publisherId, publishers.id));
 }
 
-/** All games ordered by title. */
-export async function getAllGames(db: Database): Promise<Game[]> {
+/** All games ordered by title, optionally filtered by category and publisher. */
+export async function getAllGames(db: Database, filters: GameFilters = {}): Promise<Game[]> {
     const rows = await baseGamesQuery(db).orderBy(asc(games.title));
-    return rows.map(mapGame);
+    return filterGames(rows.map(mapGame), filters);
 }
 
 /** All game ids ordered by title. */

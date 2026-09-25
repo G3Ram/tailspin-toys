@@ -1,6 +1,104 @@
 import { test, expect, type Response } from '@playwright/test';
 
 test.describe('Game Listing and Navigation', () => {
+  test('should filter games by category and clear the filter', async ({ page }) => {
+    await page.goto('/');
+
+    const categoryFilter = page.getByTestId('category-filter').first();
+    const categoryId = await categoryFilter.getAttribute('value');
+    if (categoryId === null) throw new Error('Expected a category filter option');
+
+    const totalGames = await page.getByTestId('game-card').count();
+    const matchingGames = await page
+      .locator(`[data-testid="game-card"][data-game-category-id="${categoryId}"]`)
+      .count();
+
+    await test.step('Use the category filter with the keyboard', async () => {
+      await categoryFilter.focus();
+      await page.keyboard.press('Space');
+      await expect(categoryFilter).toBeChecked();
+      await expect(page.locator('[data-testid="game-card"]:visible')).toHaveCount(matchingGames);
+      await expect(page.getByTestId('filter-results-status')).toHaveText(
+        `Showing ${matchingGames} of ${totalGames} games.`,
+      );
+    });
+
+    await test.step('Clear the selected category', async () => {
+      await page.getByTestId('clear-filters').click();
+      await expect(categoryFilter).not.toBeChecked();
+      await expect(page.locator('[data-testid="game-card"]:visible')).toHaveCount(totalGames);
+    });
+  });
+
+  test('should filter games by publisher', async ({ page }) => {
+    await page.goto('/');
+
+    const publisherSelect = page.getByTestId('publisher-filter');
+    const firstPublisher = publisherSelect.locator('option').nth(1);
+    const publisherId = await firstPublisher.getAttribute('value');
+    if (publisherId === null) throw new Error('Expected a publisher filter option');
+
+    const matchingGames = await page
+      .locator(`[data-testid="game-card"][data-game-publisher-id="${publisherId}"]`)
+      .count();
+
+    await publisherSelect.selectOption(publisherId);
+
+    await expect(page.locator('[data-testid="game-card"]:visible')).toHaveCount(matchingGames);
+    await expect(page.getByTestId('filter-results-status')).toHaveText(
+      `Showing ${matchingGames} of ${await page.getByTestId('game-card').count()} games.`,
+    );
+  });
+
+  test('should combine category and publisher filters', async ({ page }) => {
+    await page.goto('/');
+
+    const firstGame = page.getByTestId('game-card').first();
+    const categoryId = await firstGame.getAttribute('data-game-category-id');
+    const publisherId = await firstGame.getAttribute('data-game-publisher-id');
+    if (categoryId === null || publisherId === null) {
+      throw new Error('Expected the first game to have a category and publisher');
+    }
+
+    const categoryFilter = page.locator(
+      `[data-testid="category-filter"][value="${categoryId}"]`,
+    );
+    const publisherSelect = page.getByTestId('publisher-filter');
+    const matchingGames = await page
+      .locator(
+        `[data-testid="game-card"][data-game-category-id="${categoryId}"][data-game-publisher-id="${publisherId}"]`,
+      )
+      .count();
+
+    await categoryFilter.check();
+    await publisherSelect.selectOption(publisherId);
+
+    await expect(page.locator('[data-testid="game-card"]:visible')).toHaveCount(matchingGames);
+  });
+
+  test('should show a no-matches message when filters have no results', async ({ page }) => {
+    await page.goto('/');
+
+    const publisherSelect = page.getByTestId('publisher-filter');
+    await publisherSelect.evaluate((select) => {
+      if (!(select instanceof HTMLSelectElement)) {
+        throw new Error('Expected a publisher select control');
+      }
+
+      const unavailablePublisher = document.createElement('option');
+      unavailablePublisher.value = '99999';
+      unavailablePublisher.textContent = 'Publisher without games';
+      select.append(unavailablePublisher);
+      select.value = unavailablePublisher.value;
+      select.dispatchEvent(new Event('change', { bubbles: true }));
+    });
+
+    await expect(page.getByTestId('no-matching-games')).toHaveText(
+      'No games match the selected filters.',
+    );
+    await expect(page.locator('[data-testid="game-card"]:visible')).toHaveCount(0);
+  });
+
   test('should display games with titles on index page', async ({ page }) => {
     await test.step('Navigate to homepage', async () => {
       await page.goto('/');
